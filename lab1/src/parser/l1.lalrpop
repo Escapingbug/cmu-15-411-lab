@@ -1,0 +1,117 @@
+use std::str::FromStr;
+use crate::parser::ast::*;
+
+grammar;
+
+pub Program: Vec<Box<Stmt>> = {
+    "int" "main" "(" ")" "{" "}" => Vec::new(),
+    "int" "main" "(" ")" "{" <Stmts> "}" => <>,
+};
+
+Stmts: Vec<Box<Stmt>> = {
+    <ss:Stmts?> <s:Stmt> => {
+        match ss {
+            None => vec![s],
+            Some(ss) => {
+                let mut ss = ss;
+                ss.push(s);
+                ss
+            }
+        }
+    }
+}
+
+Term: Box<Expr> = {
+    "(" <Expr> ")"=> <>,
+    <Num> => Box::new(Expr::Num(<>)),
+    <Ident> => Box::new(Expr::Ident(<>))
+};
+
+Tier<Op, NextTier>: Box<Expr> = {
+    Tier<Op, NextTier> Op NextTier => Box::new(Expr::Binop(<>)),
+    NextTier
+};
+
+// This is "pub" only because of test reason for that expression is tricky to parse right
+pub(crate) Expr: Box<Expr> = {
+    Tier<Binop, Factor> => <>,
+    "-" <Expr> => Box::new(Expr::Minus(<>)),
+};
+
+Factor = Tier<FactorOp, Term>;
+
+Lvalue: Box<Lvalue> = {
+    <Ident> => Box::new(Lvalue::Ident(<>.to_string())),
+    "(" <Lvalue> ")" => Box::new(Lvalue::Lvalue(<>)),
+};
+
+Decl: Box<Decl> = {
+    "int" <Ident> => Box::new(Decl::Ident(<>.to_string())),
+    "int" <i:Ident> "=" <e:Expr> => Box::new(Decl::IdentInit(i.to_string(), e)),
+};
+
+Stmt: Box<Stmt> = {
+    <Decl> ";" => Box::new(Stmt::Decl(<>)),
+    <l:Lvalue> <op:Asnop> <e:Expr> ";" => Box::new(Stmt::Simp(l, op, e)),
+    "return" <Expr> ";" => Box::new(Stmt::Return(<>)),
+};
+
+// lexical tokens
+Ident: String = <ident> => <>.to_string();
+Num: u32 = {
+    <DecNum> => <>,
+    <HexNum> => <>,
+};
+DecNum: u32 = {
+    "0" => 0,
+    <decnum> => u32::from_str(<>).unwrap(),
+};
+HexNum: u32 = <hexnum> => u32::from_str_radix(&<>[2..], 16).unwrap();
+
+Binop: Binop = {
+    "+" => Binop::Add,
+    "-" => Binop::Minus,
+};
+
+FactorOp: Binop = {
+    "*" => Binop::Mul,
+    "/" => Binop::Div,
+    "%" => Binop::Mod,
+};
+
+Asnop: Asnop = {
+    "=" => Asnop::Equal,
+    "+=" => Asnop::AddEq,
+    "-=" => Asnop::MinEq,
+    "*=" => Asnop::MulEq,
+    "/=" => Asnop::DivEq,
+    "%=" => Asnop::ModEq,
+};
+// TODO: add reserved words check (reserved cannot be used as identifier)
+// Reserved: Stmt = <r"(struct|typedef|if|else|while|for|continue|break|return|assert|true|false|NULL|alloc|alloc_array|int|bool|void|char|string)"> => Stmt:Error(<>.to_string());
+
+match {
+    "main",
+    "int",
+    "(",
+    ")",
+    "{",
+    "}",
+    ";",
+    "return",
+    "0",
+    "+",
+    "*",
+    "-",
+    "/",
+    "%",
+    "+=",
+    "-=",
+    "*=",
+    "/=",
+    "%=",
+    "=",
+    r"[A-Za-z_][A-Za-z0-9]*" => ident,
+    r"[1-9][0-9]*" => decnum,
+    r"0[xX][0-9a-fA-F]+" => hexnum,
+}
