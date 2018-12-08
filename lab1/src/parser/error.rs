@@ -9,6 +9,7 @@ pub enum ParserError {
     /// syntax error when lalrpop does parsing (simple case for now)
     /// error string saved
     SyntaxError(String),
+    UnknownVariable(String),
 }
 
 impl fmt::Display for ParserError {
@@ -17,6 +18,7 @@ impl fmt::Display for ParserError {
 
         match self {
             SyntaxError(s) => write!(f, "syntax error: {}", s),
+            UnknownVariable(s) => write!(f, "unknown variable {} used in context", s),
         }
     }
 }

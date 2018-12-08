@@ -2,7 +2,10 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
-use super::error::Result;
+use super::error::{
+    Result,
+    ParserError,
+};
 use super::ast::*;
 use std::collections::HashSet;
 
@@ -77,29 +80,14 @@ impl Parser {
         l1::ProgramParser::new().parse(s).map_err(|e| e.into())
     }
 
-    pub fn check(ast: Vec<Box<AstNode>>) -> Result<Vec<Box<AstNode>>> {
-        let mut symbol_table = HashSet::new();
-        for node in ast {
-            match *node {
-                // when declare, insert
-                AstNode::Stmt(Stmt::Decl(decl)) => {
-                    match *decl {
-                        AstNode::Decl(Decl::Ident(id)) => {
-                            symbol_table.insert(id);
-                        },
-                        AstNode::Decl(Decl::IdentInit(id, _)) => {
-                            symbol_table.insert(id);
-                        }
-                        _ => {}
-                    }
-                }
-
-                // TODO when use, check
+    pub fn usage_check(&self, ast: Vec<Box<AstNode>>, sym_table: &mut HashSet<String>) -> Result<Vec<Box<AstNode>>> {
+        for node in ast.iter() {
+            match **node {
+                // FUCK, TODO
                 _ => {}
             }
         }
 
-        println!("{:?}", symbol_table);
-        unimplemented!()
+        Ok(ast)
     }
 }

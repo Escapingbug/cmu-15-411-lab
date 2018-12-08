@@ -40,7 +40,7 @@ impl From<Decl> for AstNode {
 #[derive(Debug, Clone)]
 pub enum Lvalue {
     Ident(String),
-    /// Lvalue(Lvalue)
+    /// "(" Lvalue ")" --> Lvalue(Lvalue)
     Lvalue(Box<AstNode>),
 }
 
