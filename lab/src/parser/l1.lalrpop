@@ -1,14 +1,14 @@
 use std::str::FromStr;
-use crate::parser::ast::*;
+use crate::ast::*;
 
 grammar;
 
-pub Program: Vec<Box<AstNode>> = {
-    "int" "main" "(" ")" "{" "}" => Vec::new(),
-    "int" "main" "(" ")" "{" <Stmts> "}" => <>,
+pub Program: Box<AnnoAstNode> = {
+    "int" "main" "(" ")" "{" "}" => Box::new(Prog { stmts: Vec::new() }.into()),
+    "int" "main" "(" ")" "{" <Stmts> "}" => Box::new(Prog { stmts: <> }.into()),
 };
 
-Stmts: Vec<Box<AstNode>> = {
+Stmts: Vec<Box<AnnoAstNode>> = {
     <ss:Stmts?> <s:Stmt> => {
         match ss {
             None => vec![s],
@@ -21,36 +21,36 @@ Stmts: Vec<Box<AstNode>> = {
     }
 }
 
-Term: Box<AstNode> = {
+Term: Box<AnnoAstNode> = {
     "(" <Expr> ")"=> <>,
     <Num> => Box::new(Expr::Num(<>).into()),
     <Ident> => Box::new(Expr::Ident(<>).into())
 };
 
-Tier<Op, NextTier>: Box<AstNode> = {
+Tier<Op, NextTier>: Box<AnnoAstNode> = {
     Tier<Op, NextTier> Op NextTier => Box::new(Expr::Binop(<>).into()),
     NextTier
 };
 
 // This is "pub" only because of test reason for that expression is tricky to parse right
-pub(crate) Expr: Box<AstNode> = {
+pub(crate) Expr: Box<AnnoAstNode> = {
     Tier<Binop, Factor> => <>,
     "-" <Expr> => Box::new(Expr::Minus(<>).into()),
 };
 
 Factor = Tier<FactorOp, Term>;
 
-Lvalue: Box<AstNode> = {
+Lvalue: Box<AnnoAstNode> = {
     <Ident> => Box::new(Lvalue::Ident(<>.to_string()).into()),
     "(" <Lvalue> ")" => Box::new(Lvalue::Lvalue(<>).into()),
 };
 
-Decl: Box<AstNode> = {
+Decl: Box<AnnoAstNode> = {
     "int" <Ident> => Box::new(Decl::Ident(<>.to_string()).into()),
     "int" <i:Ident> "=" <e:Expr> => Box::new(Decl::IdentInit(i.to_string(), e).into()),
 };
 
-Stmt: Box<AstNode> = {
+Stmt: Box<AnnoAstNode> = {
     <Decl> ";" => Box::new(Stmt::Decl(<>).into()),
     <l:Lvalue> <op:Asnop> <e:Expr> ";" => Box::new(Stmt::Simp(l, op, e).into()),
     "return" <Expr> ";" => Box::new(Stmt::Return(<>).into()),
@@ -68,18 +68,18 @@ DecNum: u32 = {
 };
 HexNum: u32 = <hexnum> => u32::from_str_radix(&<>[2..], 16).unwrap();
 
-Binop: Box<AstNode> = {
+Binop: Box<AnnoAstNode> = {
     "+" => Box::new(Binop::Add.into()),
     "-" => Box::new(Binop::Minus.into()),
 };
 
-FactorOp: Box<AstNode>= {
+FactorOp: Box<AnnoAstNode>= {
     "*" => Box::new(Binop::Mul.into()),
     "/" => Box::new(Binop::Div.into()),
     "%" => Box::new(Binop::Mod.into()),
 };
 
-Asnop: Box<AstNode> = {
+Asnop: Box<AnnoAstNode> = {
     "=" => Box::new(Asnop::Equal.into()),
     "+=" => Box::new(Asnop::AddEq.into()),
     "-=" => Box::new(Asnop::MinEq.into()),
