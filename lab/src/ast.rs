@@ -1,25 +1,21 @@
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Ty {
-    Int,
-}
+use crate::types::Ty;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Anno {
-    /// Type
-    ty: Ty,
+    ty: Option<Ty>
 }
 
 /// annotated ast node
 #[derive(Debug, Clone)]
 pub struct AnnoAstNode {
-    pub anno: Option<Anno>,
+    pub anno: Anno,
     pub node: Box<AstNode>
 }
 
 impl From<AstNode> for AnnoAstNode {
     fn from(node: AstNode) -> Self {
         Self {
-            anno: None,
+            anno: Anno::default(),
             node: Box::new(node)
         }
     }
@@ -28,7 +24,7 @@ impl From<AstNode> for AnnoAstNode {
 impl From<Box<AstNode>> for Box<AnnoAstNode> {
     fn from(node: Box<AstNode>) -> Self {
         Box::new(AnnoAstNode {
-            anno: None,
+            anno: Anno::default(),
             node: node
         })
     }
@@ -44,6 +40,26 @@ pub enum AstNode {
     Binop(Binop),
     Asnop(Asnop),
 }
+
+macro_rules! astnode_to_var {
+    ($var:tt) => {
+        impl From<AstNode> for $var {
+            fn from(node: AstNode) -> Self {
+                if let AstNode::$var(var) = node {
+                    var
+                } else {
+                    panic!("node {:?} has wrong type, maybe parsing rule error", node)
+                }
+            }
+        }
+    }
+}
+
+astnode_to_var!(Prog);
+astnode_to_var!(Stmt);
+astnode_to_var!(Decl);
+astnode_to_var!(Lvalue);
+astnode_to_var!(Expr);
 
 #[derive(Debug, Clone)]
 pub struct Prog {
